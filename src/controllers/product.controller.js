@@ -1,191 +1,98 @@
-const {
-    Product,
-    Transaction
-} = require("../models");
+const { success, error } = require("../utils/response");
+const { Product, Transaction } = require("../models");
 
 const sequelize = require("../config/database");
 
 
 
 // POST /api/products
-exports.createProduct = async(req,res,next)=>{
-
+exports.createProduct = async (req, res) => {
     try {
-
 
         const product = await Product.create(req.body);
 
+        return res.status(201).json(
+            success(product, "Product created successfully")
+        );
 
-        res.status(201).json({
-            message:"Product created successfully",
-            data:product
+    } catch (err) {
+        return res.status(500).json(
+            error("Failed to create product")
+        );
+    }
+};
+
+// GET All products
+exports.getAllProducts = async (req, res) => {
+    try {
+
+        const products = await Product.findAll({
+            order: [["updatedAt", "DESC"]]
         });
 
+        return res.status(200).json(
+            success(products, "Products fetched successfully")
+        );
 
-    } catch(error){
-
-        next(error);
-
+    } catch (err) {
+        return res.status(500).json(
+            error("Failed to fetch products")
+        );
     }
-
 };
 
-
-
-
-// GET /api/products
-exports.getProducts = async(req,res,next)=>{
-
-
+exports.updateStock = async (req, res) => {
     try {
+        const { id } = req.params;
+        const { type, amount } = req.body;
 
+        const product = await Product.findByPk(id);
 
-        const products =
-            await Product.findAll({
-                order:[
-                    ["createdAt","DESC"]
-                ]
-            });
-
-
-        res.json(products);
-
-
-    }catch(error){
-
-        next(error);
-
-    }
-
-};
-
-
-
-
-
-
-// PATCH /api/products/:id/stock
-exports.updateStock = async(req,res,next)=>{
-
-
-    const transaction =
-        await sequelize.transaction();
-
-
-    try {
-
-
-        const product =
-            await Product.findByPk(
-                req.params.id,
-                {
-                    transaction,
-                    lock:true
-                }
+        if (!product) {
+            return res.status(404).json(
+                error("Product not found")
             );
-
-
-        if(!product){
-
-            return res.status(404).json({
-                message:"Product not found"
-            });
-
         }
 
+        let newQuantity = product.quantity;
 
-
-        const {
-            type,
-            amount
-        } = req.body;
-
-
-
-        const oldQuantity =
-            product.quantity;
-
-
-
-        if(type === "INCREASE"){
-
-            product.quantity += amount;
-
-        }
-        else if(type === "DECREASE"){
-
-
-            if(product.quantity - amount < 0){
-
-                throw new Error(
-                    "Stock cannot be less than zero"
+        if (type === "INCREASE") {
+            newQuantity += amount;
+        } else {
+            if (product.quantity < amount) {
+                return res.status(400).json(
+                    error("Stock cannot go below zero")
                 );
-
             }
-
-
-            product.quantity -= amount;
-
-
-        }
-        else {
-
-            return res.status(400).json({
-                message:"Invalid stock type"
-            });
-
+            newQuantity -= amount;
         }
 
-
-
-        await product.save({
-            transaction
-        });
-
-
+        product.quantity = newQuantity;
+        await product.save();
 
         await Transaction.create({
-
-            productId:product.id,
-
+            productId: id,
             type,
-
             amount,
-
-            oldQuantity,
-
-            newQuantity:
-                product.quantity
-
-
-        },{
-            transaction
+            oldQuantity: product.quantity,
+            newQuantity
         });
 
+        return res.status(200).json(
+            success(product, "Stock updated successfully")
+        );
 
-
-        await transaction.commit();
-
-
-
-        res.json({
-
-            message:"Stock updated",
-
-            product
-
-        });
-
-
-
-    }catch(error){
-
-
-        await transaction.rollback();
-
-        next(error);
-
+    } catch (err) {
+        return res.status(500).json(
+            error("Stock update failed")
+        );
     }
-
-
 };
+
+
+
+
+
+
+
+

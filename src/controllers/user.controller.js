@@ -1,8 +1,10 @@
 const { User } = require("../models");
 
 
+
 // POST /api/users
 exports.createUser = async (req, res, next) => {
+    console.log("REQ BODY:", req.body);
 
     try {
 
