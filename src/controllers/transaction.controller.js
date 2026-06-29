@@ -3,73 +3,34 @@ const paginate = require("../utils/paginate");
 const { Transaction } = require("../models");
 
 // GET /api/transactions?page=1
-exports.getTransactions = async(req,res,next)=>{
-
-
+exports.getAllTransactions = async (req, res) => {
     try {
 
+        const { page, size } = req.query;
 
-        const page =
-            Number(req.query.page) || 1;
+        const { limit, offset } = paginate(page, size);
 
-
-        const limit = 5;
-
-
-        const offset =
-            (page - 1) * limit;
-
-
-
-        const result =
-            await Transaction.findAndCountAll({
-
-                limit,
-
-                offset,
-
-
-                include:[
-                    {
-                        model:Product,
-                        attributes:[
-                            "sku",
-                            "name"
-                        ]
-                    }
-                ],
-
-
-                order:[
-                    ["createdAt","DESC"]
-                ]
-
-            });
-
-
-
-        res.json({
-
-            total:result.count,
-
-            currentPage:page,
-
-            totalPages:
-                Math.ceil(
-                    result.count / limit
-                ),
-
-            data:result.rows
-
+        const { count, rows } = await Transaction.findAndCountAll({
+            limit,
+            offset,
+            order: [["createdAt", "DESC"]]
         });
 
+        return res.status(200).json(
+            success(
+                {
+                    total: count,
+                    page: Number(page) || 1,
+                    size: limit,
+                    records: rows
+                },
+                "Transactions fetched successfully"
+            )
+        );
 
-
-    }catch(error){
-
-        next(error);
-
+    } catch (err) {
+        return res.status(500).json(
+            error("Failed to fetch transactions")
+        );
     }
-
-
 };
