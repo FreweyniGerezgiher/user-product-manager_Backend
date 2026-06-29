@@ -1,9 +1,6 @@
-const {
-    Transaction,
-    Product
-} = require("../models");
-
-
+const { success, error } = require("../utils/response");
+const paginate = require("../utils/paginate");
+const { Transaction } = require("../models");
 
 // GET /api/transactions?page=1
 exports.getTransactions = async(req,res,next)=>{

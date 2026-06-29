@@ -36,6 +36,8 @@ app.use(
     require("./routes/transaction.routes")
 );
 
+const errorHandler = require("./middleware/error.middleware");
+
 
 
 module.exports = app;
